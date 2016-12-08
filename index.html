@@ -203,11 +203,11 @@ d3.csv("CAT_GE_Stock.csv", function(error, data) {
           .attr("cy", function (d) {return y(d.AdjClose)})
           .attr("r", 5)
           .style("cursor", "pointer")
-          .style("fill", "#D0C7BF")
-          // .style("fill", function (d) {
-          //   if (d.Company === "CAT") { return color[1]; }
-          //   else { return color[0]; }
-          // })
+        //  .style("fill", "#D0C7BF")
+          .style("fill", function (d) {
+            if (d.Company === "CAT") { return color[1]; }
+            else { return color[0]; }
+          })
           .attr("opacity", 0)
           .on("mouseover", function(d) {
             d3.select(this).attr("opacity", 1);
