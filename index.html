@@ -60,9 +60,23 @@ div.tooltip {
   font-family: "BentonSans";
 }
 
+div.tooltip2 {
+  position: absolute;
+  font-size: 12px;
+  pointer-events: none;
+  display: block;
+  font-family: "BentonSans";
+  font-weight: 500;
+}
+
+.overlay {
+  fill: none;
+  pointer-events: all;
+}
+
 </style>
 <body>
-<h2> Significant Moments in Caterpillar's and GE's Year Compared </h1>
+<h2> Significant Moments in Caterpillar's Year </h1>
 <h3> Share Price ($) </h3>
 <svg width="900" height="550"></svg>
 <script src="https://d3js.org/d3.v4.min.js"></script>
@@ -82,6 +96,8 @@ var x = d3.scaleTime()
 var y = d3.scaleLinear()
     .rangeRound([height, 0]);
 
+var color = ["#005eb8", "#FFCF0E"];
+
 var line = d3.line()
     .x(function(d) { return x(d.Date); })
     .y(function(d) { return y(d.AdjClose); })
@@ -91,8 +107,15 @@ var div1 = d3.select("body").append("div")
      .attr("class", "tooltip")
      .style("opacity", 0);
 
+var div2 = d3.select("body").append("div")
+.attr("class", "tooltip2")
+    .style("opacity", 0);
+
 d3.csv("CAT_GE_Stock.csv", function(error, data) {
   if (error) throw error;
+
+//FILTER COMPANY
+  //data = data.filter(function(d) { return d.Company === "CAT";})
 
   data.forEach(function(d) {
     d.Date = parseTime(d.Date);
@@ -106,14 +129,9 @@ d3.csv("CAT_GE_Stock.csv", function(error, data) {
 
   data = data.sort(sortByDateAscending);
 
-  // var chart = d3.select("body")
-  //   .append("div")
-  //   .datum(nested);
-
-//  console.log(data);
-
-  x.domain(d3.extent(data, function(d) { return d.Date; }));
-  y.domain([d3.min(data, function(d) { return d.AdjClose; }) - 10, d3.max(data, function(d) { return d.AdjClose; }) +10 ]);
+  x.domain([parseTime("1/1/16"),parseTime("11/30/16")]);
+  y.domain([d3.min(data, function(d) { return d.AdjClose; }) - 15, d3.max(data, function(d) { return d.AdjClose; }) +10 ]);
+//  y.domain([0, d3.max(data, function(d) { return d.AdjClose; }) +10 ]);
 
   var xGroup = g.append("g")
       .attr("class", "axis axis--x")
@@ -122,8 +140,10 @@ d3.csv("CAT_GE_Stock.csv", function(error, data) {
         .tickPadding(0)
         .tickSizeOuter([0])
         .tickSizeInner([12])
-      //  .tickValues(["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"])
+        .tickFormat(d3.timeFormat("%B"))
       );
+
+      d3.select(".axis--x line").remove()
 
   xGroup.selectAll("text")
     .attr("dx", +width/22)
@@ -150,19 +170,17 @@ d3.csv("CAT_GE_Stock.csv", function(error, data) {
       .key(function(d) { return d.Company; })
       .entries(data);
 
-      console.log(nested);
+    //  console.log(nested);
 
-    nested.forEach(function(d) {
-        g.append("path")
+    g.selectAll(".line")
+    .data(nested)
+    .enter()
+    .append("path")
             .attr("class", "line")
-            .attr("d", line(d.values));
-    });
+            .attr("d", function (d) { return line(d.values)})
 
-  // g.append("path")
-  //     .data(nested)
-  //     .attr("class", "line")
-  //     .attr("d", line);
-
+    //ADD COLORS
+   .style("stroke", function (d,i) { return color[i]});
 
   g.selectAll(".dateCircle")
     .data(data)
@@ -176,7 +194,70 @@ d3.csv("CAT_GE_Stock.csv", function(error, data) {
         else {return "none";}
       })
 
-  var calloutCircle = g.selectAll(".calloutCircle")
+    var circleHover = g.selectAll(".circleHover")
+                        .data(data)
+                        .enter();
+
+      circleHover.append("circle")
+          .attr("cx", function (d) {return x(d.Date)})
+          .attr("cy", function (d) {return y(d.AdjClose)})
+          .attr("r", 5)
+          .style("cursor", "pointer")
+          .style("fill", "#D0C7BF")
+          // .style("fill", function (d) {
+          //   if (d.Company === "CAT") { return color[1]; }
+          //   else { return color[0]; }
+          // })
+          .attr("opacity", 0)
+          .on("mouseover", function(d) {
+            d3.select(this).attr("opacity", 1);
+
+            // function textColor() { if (d.Company === "CAT") { return color[1]; } else { return color[0]; }};
+            // div2.transition().duration(300).style("opacity", 1);
+            //       div2.html(
+            //         "<div><p style=color:#D0C7BF>" + d3.format(".4n")(d.AdjClose) + " $ </p></div>"
+            //       )
+            //       div2.style("left", (d3.event.pageX - 20) + "px")
+            //       .style("top", (d3.event.pageY+20) + "px");
+
+            function textColor() { if (d.Company === "CAT") { return color[1]; } else { return color[0]; }};
+            div2.transition().duration(300).style("opacity", 1);
+                  div2.html(
+                    "<div><p style=color:" + textColor(d.Company) + ">" + d3.format(".4n")(d.AdjClose) + " $ </p></div>"
+                  )
+                  div2.style("left", (d3.event.pageX - 20) + "px")
+                  //div2.style("center", (d3.event.pageX - 20) + "px")
+                  .style("top", (d3.event.pageY+20) + "px");
+
+          })
+          .on("mouseout", function(d) {
+            d3.select(this).attr("opacity", 0);
+            div2.transition().duration(300).style("opacity", 0);
+          });
+
+      // var textHover = g.selectAll(".textHover")
+      //   .data(data)
+      //   .enter().append("text")
+      //   .attr("x", function (d) {return x(d.Date)})
+      //   .attr("y", function (d) {return y(d.AdjClose)-30})
+      //   .attr("dx", "-0.25em")
+      //   .attr("dy", "-.35em")
+      //   .style("fill", function (d) {
+      //     if (d.Company === "CAT") { return color[1]; }
+      //     else { return color[0]; }
+      //   })
+      //  .style("font-size", "10px")
+      //  .style("font-family","BentonSans")
+      //  .style("cursor", "pointer")
+      //  .text(function(d) { return d.AdjClose;})
+      //  .on("mouseover", function(d) {
+      //    d3.select(this).attr("opacity", 1)
+      //  })
+      //  .on("mouseout", function(d) {
+      //    d3.select(this).attr("opacity", 0)
+      //  });
+
+      var calloutCircle = g.selectAll(".calloutCircle")
                       .data(data)
                       .enter()
                       .filter(function(d) { return d.Notes !== "none";})
@@ -224,8 +305,10 @@ d3.csv("CAT_GE_Stock.csv", function(error, data) {
        })
       .on("mouseout", function () {
                 div1.transition().duration(300).style("opacity", 0);});
-
 });
 
 </script>
+
+<div> <h3 style=padding-left:400px;padding-top:15px> 2016 </h3> </div>
+
 </body>
